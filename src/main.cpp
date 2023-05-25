@@ -2,6 +2,12 @@
 #include <SFML/Graphics.hpp>
 
 const int unsigned barSize = 4;
+int board[3][3] = { // -1 -> Empty; 0 -> X; 1 -> O
+    { -1, -1, -1 },
+    { -1, -1, -1 },
+    { -1, -1, -1 }
+};
+bool turn = 0; // 0 -> X; 1 -> O
 
 void drawLines(sf::RenderWindow& window, sf::Vector2u size) {
     int yHalf = size.y / 2;
@@ -56,7 +62,9 @@ void click(sf::Vector2u size, sf::Vector2i position) {
         int x = mousePosition.x > boardSizeThree * 2 ? 2 : mousePosition.x > boardSizeThree ? 1 : 0;
         int y = mousePosition.y > boardSizeThree * 2 ? 2 : mousePosition.y > boardSizeThree ? 1 : 0;
         
-        std::cout << x << ", " << y << std::endl;
+        if (board[x][y] == -1) return;
+        board[x][y] = turn;
+        turn = !turn;
     }
 }
 
