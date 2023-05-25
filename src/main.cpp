@@ -8,7 +8,7 @@ void drawLines(sf::RenderWindow& window, sf::Vector2u size) {
     int xHalf = size.x / 2;
 
     // Not very complex math
-    int bar = (size.x >= size.y ? size.y : size.x) - 2 * barSize;
+    int bar = std::min(size.x, size.y) - barSize * 2;
 
     int y = yHalf - bar / 2;
     int x1 = xHalf - bar / 6 - 2; 
@@ -45,11 +45,27 @@ void drawLines(sf::RenderWindow& window, sf::Vector2u size) {
     window.draw(horz2);
 }
 
-int main(int, char**) {
+void click(sf::Vector2u size, sf::Vector2i position) {
+    int boardSize = std::min(size.x, size.y) - barSize * 2;
+    int boardSizeThree = (boardSize - boardSize % 3) / 3;
+    sf::Vector2i boardPosition = size.x >= size.y ? sf::Vector2i((size.x - boardSize) / 2, barSize) : sf::Vector2i(barSize, (size.y - boardSize) / 2);
 
+    if (position.x > boardPosition.x && position.x < boardPosition.x + boardSize && position.y > boardPosition.y && position.y < boardPosition.y + boardSize) {
+        sf::Vector2i mousePosition = position - boardPosition; // Position of mouse on board
+
+        int x = mousePosition.x > boardSizeThree * 2 ? 2 : mousePosition.x > boardSizeThree ? 1 : 0;
+        int y = mousePosition.y > boardSizeThree * 2 ? 2 : mousePosition.y > boardSizeThree ? 1 : 0;
+        
+        std::cout << x << ", " << y << std::endl;
+    }
+}
+
+int main(int, char**) {
     sf::RenderWindow window(sf::VideoMode(800, 600), "Tic Tac Toe");
 
-     while (window.isOpen()) {
+    bool mouseLock = false;
+
+    while (window.isOpen()) {
         // sf::Time deltaTime = clock.restart();
         // float deltaSeconds = deltaTime.asSeconds();
 
@@ -59,6 +75,11 @@ int main(int, char**) {
                 window.close();
             else if (e.type == sf::Event::Resized)
                 window.setView(sf::View(sf::FloatRect(0, 0, e.size.width, e.size.height)));
+            else if (e.type == sf::Event::MouseButtonPressed && e.mouseButton.button == sf::Mouse::Left && !mouseLock) {
+                click(window.getSize(), sf::Mouse::getPosition() - window.getPosition() - sf::Vector2i(0, 30));
+                mouseLock = true;
+            } else if (e.type == sf::Event::MouseButtonReleased && e.mouseButton.button == sf::Mouse::Left && mouseLock)
+                mouseLock = false;
 
         window.clear();
 
