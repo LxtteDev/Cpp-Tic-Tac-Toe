@@ -2,12 +2,20 @@
 #include <SFML/Graphics.hpp>
 
 const int unsigned barSize = 4;
+// bool turn = 0; // 0 -> X; 1 -> O
+unsigned int move = 0;
 int board[3][3] = { // -1 -> Empty; 0 -> X; 1 -> O
     { -1, -1, -1 },
     { -1, -1, -1 },
     { -1, -1, -1 }
 };
-bool turn = 0; // 0 -> X; 1 -> O
+int moves[5][2] = {
+    { -1, -1 },
+    { -1, -1 },
+    { -1, -1 },
+    { -1, -1 },
+    { -1, -1 }
+};
 
 sf::Texture xImage;
 sf::Texture oImage;
@@ -54,6 +62,51 @@ void drawLines(sf::RenderWindow& window, sf::Vector2u size) {
     window.draw(horz2);
 }
 
+sf::Vector2i solveWin(int player = 0) {
+    for (unsigned int y = 0; y < 3; y++) {
+        // Close your eyes 8-(
+
+        // Horizontal
+        if (board[0][y] == player && board[1][y] == player) if(board[2][y] == -1) return sf::Vector2i(2, y);
+        if (board[1][y] == player && board[2][y] == player) if(board[0][y] == -1) return sf::Vector2i(0, y);
+        if (board[0][y] == player && board[2][y] == player) if(board[1][y] == -1) return sf::Vector2i(1, y);
+
+        // Vertical
+        if (board[y][0] == player && board[y][1] == player) if(board[y][2] == -1) return sf::Vector2i(y, 2);
+        if (board[y][1] == player && board[y][2] == player) if(board[y][0] == -1) return sf::Vector2i(y, 0);
+        if (board[y][0] == player && board[y][2] == player) if(board[y][1] == -1) return sf::Vector2i(y, 1);
+
+        // Diagonal state cannot arise
+    }
+
+    return sf::Vector2i(-1, -1);
+}
+
+sf::Vector2i predictMove(int move, int x, int y) {
+    // Two in a row
+    sf::Vector2i winPosition = solveWin();
+    if (winPosition.x > -1) return winPosition;
+
+    if (move == 0 && x != 1 && y != 1) return sf::Vector2i(1, 1);
+    if (move == 1) {
+        // Place on corresponding edge
+        int pX = moves[move - 1][0];
+        int pY = moves[move - 1][1];
+
+        if (pX == x) return sf::Vector2i(x, 1);
+        if (pY == y) return sf::Vector2i(1, y);
+        return sf::Vector2i(1, 0);
+    }
+
+    for (unsigned int y = 0; y < 3; y++) {
+        for (unsigned int x = 0; x < 3; x++) {
+            if (board[x][y] == -1) return sf::Vector2i(x, y);
+        }
+    }
+
+    return sf::Vector2i(-1, -1);
+}
+
 void click(sf::Vector2u size, sf::Vector2i position) {
     int boardSize = std::min(size.x, size.y) - barSize * 2;
     int boardSizeThree = (boardSize - boardSize % 3) / 3;
@@ -64,10 +117,17 @@ void click(sf::Vector2u size, sf::Vector2i position) {
 
         int x = mousePosition.x > boardSizeThree * 2 ? 2 : mousePosition.x > boardSizeThree ? 1 : 0;
         int y = mousePosition.y > boardSizeThree * 2 ? 2 : mousePosition.y > boardSizeThree ? 1 : 0;
-        
+
         if (board[x][y] == -1) {
-            board[x][y] = turn;
-            turn = !turn;
+            board[x][y] = 0;
+
+            moves[move][0] = x;
+            moves[move][1] = y;
+
+            sf::Vector2i computer = predictMove(move, x, y);
+            if (computer.x != -1);
+                board[computer.x][computer.y] = 1;
+            move ++;
         }
     }
 }
