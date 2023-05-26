@@ -82,6 +82,15 @@ sf::Vector2i solveWin(int player = 0) {
     return sf::Vector2i(-1, -1);
 }
 
+int detectWin() {
+    for (unsigned int y = 0; y < 3; y++) {
+        if (board[0][y] == board[1][y] && board[1][y] == board[2][y] && board[2][y] != -1) return board[2][y];
+        if (board[y][0] == board[y][1] && board[y][1] == board[y][2] && board[y][2] != -1) return board[y][2];
+    }
+
+    return -1;
+}
+
 sf::Vector2i predictMove(int move, int x, int y) {
     // Two in a row
     sf::Vector2i winPosition = solveWin();
@@ -107,6 +116,10 @@ sf::Vector2i predictMove(int move, int x, int y) {
     return sf::Vector2i(-1, -1);
 }
 
+void onWin(int player) {
+    std::cout << (player == 0 ? "Human" : "Computer") << " wins" << std::endl;
+}
+
 void click(sf::Vector2u size, sf::Vector2i position) {
     int boardSize = std::min(size.x, size.y) - barSize * 2;
     int boardSizeThree = (boardSize - boardSize % 3) / 3;
@@ -123,11 +136,17 @@ void click(sf::Vector2u size, sf::Vector2i position) {
 
             moves[move][0] = x;
             moves[move][1] = y;
+            
+            int win = detectWin();
+            if (win == 0) return onWin(0);
 
             sf::Vector2i computer = predictMove(move, x, y);
             if (computer.x != -1);
                 board[computer.x][computer.y] = 1;
             move ++;
+            
+            int win2 = detectWin();
+            if (win2 == 1) return onWin(0);
         }
     }
 }
