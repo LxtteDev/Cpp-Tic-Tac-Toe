@@ -2,7 +2,7 @@
 #include <SFML/Graphics.hpp>
 
 const int unsigned barSize = 4;
-// bool turn = 0; // 0 -> X; 1 -> O
+unsigned int hasWon = -1; // -1 -> Not completed; 0 -> Computer Win; 1 -> Tie
 unsigned int move = 0;
 int board[3][3] = { // -1 -> Empty; 0 -> X; 1 -> O
     { -1, -1, -1 },
@@ -19,6 +19,9 @@ int moves[5][2] = {
 
 sf::Texture xImage;
 sf::Texture oImage;
+sf::Texture winScreen;
+sf::Texture tieScreen;
+sf::Texture restartButton;
 
 void drawLines(sf::RenderWindow& window, sf::Vector2u size) {
     int yHalf = size.y / 2;
@@ -75,9 +78,17 @@ sf::Vector2i solveWin(int player = 0) {
         if (board[y][0] == player && board[y][1] == player) if(board[y][2] == -1) return sf::Vector2i(y, 2);
         if (board[y][1] == player && board[y][2] == player) if(board[y][0] == -1) return sf::Vector2i(y, 0);
         if (board[y][0] == player && board[y][2] == player) if(board[y][1] == -1) return sf::Vector2i(y, 1);
-
-        // Diagonal state cannot arise
     }
+
+    // DO NOT LOOK
+    if (board[0][0] == board[1][1] && board[0][0] == player && board[2][2] == -1) return sf::Vector2i(2, 2);
+    if (board[2][2] == board[0][0] && board[2][2] == player && board[1][1] == -1) return sf::Vector2i(1, 1);
+    if (board[2][2] == board[1][1] && board[2][2] == player && board[0][0] == -1) return sf::Vector2i(0, 0);
+
+    if (board[2][0] == board[1][1] && board[2][0] == player && board[0][2] == -1) return sf::Vector2i(0, 2);
+    if (board[0][2] == board[2][0] && board[0][2] == player && board[1][1] == -1) return sf::Vector2i(1, 1);
+    if (board[0][2] == board[1][1] && board[0][2] == player && board[2][0] == -1) return sf::Vector2i(2, 0);
+
 
     return sf::Vector2i(-1, -1);
 }
@@ -88,15 +99,21 @@ int detectWin() {
         if (board[y][0] == board[y][1] && board[y][1] == board[y][2] && board[y][2] != -1) return board[y][2];
     }
 
+    if (board[0][0] == board[1][1] && board[1][1] == board[2][2] && board[2][2] != -1) return board[1][1];
+    if (board[2][0] == board[1][1] && board[1][1] == board[0][2] && board[0][2] != -1) return board[1][1];
+
     return -1;
 }
 
 sf::Vector2i predictMove(int move, int x, int y) {
     // Two in a row
-    sf::Vector2i winPosition = solveWin();
+    sf::Vector2i winPosition = solveWin(1); // Priorities computer win
     if (winPosition.x > -1) return winPosition;
 
-    if (move == 0 && x != 1 && y != 1) return sf::Vector2i(1, 1);
+    sf::Vector2i loosePosition = solveWin(0);
+    if (loosePosition.x > -1) return loosePosition;
+
+    if (move == 0 && (x != 1 || y != 1)) return sf::Vector2i(1, 1);
     if (move == 1) {
         // Place on corresponding edge
         int pX = moves[move - 1][0];
@@ -107,20 +124,57 @@ sf::Vector2i predictMove(int move, int x, int y) {
         return sf::Vector2i(1, 0);
     }
 
-    for (unsigned int y = 0; y < 3; y++) {
-        for (unsigned int x = 0; x < 3; x++) {
+    for (unsigned int y = 0; y < 3; y++)
+        for (unsigned int x = 0; x < 3; x++)
             if (board[x][y] == -1) return sf::Vector2i(x, y);
-        }
-    }
 
     return sf::Vector2i(-1, -1);
 }
 
-void onWin(int player) {
-    std::cout << (player == 0 ? "Human" : "Computer") << " wins" << std::endl;
+void showWin(sf::RenderWindow& window, sf::Vector2u size) {
+    sf::Sprite win;
+    sf::Sprite restart;
+
+    int scale = (float)(std::max(size.x, size.y) - 10) / 128.0f;
+    sf::Vector2f centre((float)size.x / 2.0f - scale * 64, (float)size.y / 2.0f - scale * 64);
+
+    win.setPosition(centre);
+    win.setScale(scale, scale);
+    win.setTexture(hasWon == 0 ? winScreen : tieScreen);
+
+    restart.setPosition(centre);
+    restart.setScale(scale, scale);
+    restart.setTexture(restartButton);
+
+    window.draw(win);
+    window.draw(restart);
 }
 
 void click(sf::Vector2u size, sf::Vector2i position) {
+    if (hasWon != -1) {
+        int scale = (float)(std::max(size.x, size.y) - 10) / 128.0f;
+        sf::Vector2f topLeft((float)size.x / 2.0f - scale * 64, (float)size.y / 2.0f - scale * 64);
+        sf::Vector2f bottomRight(128.0f * scale + topLeft.x, 128.0f * scale + topLeft.y);
+
+        if (float(position.x) > topLeft.x && float(position.x) < bottomRight.x &&
+            float(position.y) > topLeft.y && float(position.y) < bottomRight.y) {
+            // Clicked restart
+
+            hasWon = -1;
+            move = 0;
+
+            for (unsigned int y = 0; y < 3; y++)
+                for (unsigned int x = 0; x < 3; x++)
+                    board[x][y] = -1;
+
+            for (unsigned int y = 0; y < 5; y++)
+                for (unsigned int x = 0; x < 2; x++)
+                    moves[x][y] = -1;
+        }
+
+        return;
+    }
+
     int boardSize = std::min(size.x, size.y) - barSize * 2;
     int boardSizeThree = (boardSize - boardSize % 3) / 3;
     sf::Vector2i boardPosition = size.x >= size.y ? sf::Vector2i((size.x - boardSize) / 2, barSize) : sf::Vector2i(barSize, (size.y - boardSize) / 2);
@@ -136,9 +190,6 @@ void click(sf::Vector2u size, sf::Vector2i position) {
 
             moves[move][0] = x;
             moves[move][1] = y;
-            
-            int win = detectWin();
-            if (win == 0) return onWin(0);
 
             sf::Vector2i computer = predictMove(move, x, y);
             if (computer.x != -1);
@@ -146,7 +197,9 @@ void click(sf::Vector2u size, sf::Vector2i position) {
             move ++;
             
             int win2 = detectWin();
-            if (win2 == 1) return onWin(0);
+            if (win2 == 1) hasWon = 0;
+
+            if (move == 5) hasWon = 1;
         }
     }
 }
@@ -177,6 +230,9 @@ int main(int, char**) {
 
     xImage.loadFromFile("img/X.png");
     oImage.loadFromFile("img/O.png");
+    winScreen.loadFromFile("img/win.png");
+    tieScreen.loadFromFile("img/tie.png");
+    restartButton.loadFromFile("img/restart.png");
 
     bool mouseLock = false;
 
@@ -200,6 +256,7 @@ int main(int, char**) {
 
         drawLines(window, window.getSize());
         displayBoard(window, window.getSize());
+        if (hasWon != -1) showWin(window, window.getSize());
 
         window.display();
     }
