@@ -20,6 +20,10 @@ file(GLOB source
 
 add_executable(TicTacToe src/main.cpp ${source})
 
+if(WIN32)
+    set_target_properties(TicTacToe PROPERTIES WIN32_EXECUTABLE true)
+endif()
+
 target_link_libraries(TicTacToe sfml-graphics)
 
 set(CPACK_PROJECT_NAME ${PROJECT_NAME})
